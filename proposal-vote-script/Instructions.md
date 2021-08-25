@@ -1,7 +1,7 @@
 # proposal-vote-script
 
 This script will help you to vote for the proposal if it's not voted already.
-You just have to do clone the repo, configure the `config.toml` and run the the script.
+You just have to clone the repo, configure the `config.toml` and run the the script.
 
 Clone the repo
 ```sh
@@ -16,10 +16,6 @@ cd cosmos-utils/proposal-vote-script
 cp example.config.toml config.toml
 ```
 and replace these values with your validator details.
-
-- *rpc_endpoint*
-
-     RPC endpoint of your validator.
 
 - *lcd_endpoint*
 
@@ -44,3 +40,15 @@ and replace these values with your validator details.
 - *fees*
 
      Fees to execute the tx. 
+
+#### Run the script
+
+-  Build and run the using binary
+
+```sh
+go build -o proposal-script && ./proposal-script
+```
+- or run
+```sh
+go run main.go
+```
