@@ -7,4 +7,4 @@ chain_id = "test"
 fees = "5000uregen"
 
 [scraper]
- rate = "4s"
+rate = "4s"
