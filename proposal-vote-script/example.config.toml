@@ -1,4 +1,3 @@
-rpc_endpoint = "http://localhost:26657"
 lcd_endpoint = "http://localhost:1317"
 deamon = "regen"
 key_name = "validator"
@@ -7,4 +6,4 @@ chain_id = "test"
 fees = "5000uregen"
 
 [scraper]
- rate = "4s"
+rate = "4s"

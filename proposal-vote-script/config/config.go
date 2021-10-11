@@ -13,7 +13,6 @@ type (
 	}
 	// Config
 	Config struct {
-		RPCEndpoint    string  `mapstructure:"rpc_endpoint"`
 		LCDEndpoint    string  `mapstructure:"lcd_endpoint"`
 		Deamon         string  `mapstructure:"deamon"`
 		KeyName        string  `mapstructure:"key_name"`
