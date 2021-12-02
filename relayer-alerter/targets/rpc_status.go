@@ -23,11 +23,13 @@ func GetEndpointsStatus(cfg *config.Config) error {
 	var msg string
 
 	for _, value := range addresses {
-		if value.NetworkName != "persistence" { // for now ignore endpoint alerts for persistence
+		if value.NetworkName != "persistence" && value.NetworkName != "iris" && value.NetworkName != "Crypto.com" { // for now ignore endpoint alerts for persistence
 			ops = HTTPOptions{
 				Endpoint: value.RPC + "/status",
 				Method:   http.MethodGet,
 			}
+
+			fmt.Println(value.NetworkName)
 
 			_, err := HitHTTPTarget(ops)
 			if err != nil {
