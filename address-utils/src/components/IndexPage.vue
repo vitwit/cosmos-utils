@@ -58,10 +58,17 @@
               placeholder="type:tendermint/PubKeyEd25519 "
               aria-label="ValPubkey Type"
             />
-            <label
-              for="exampleFormControlTextarea1"
-              class="form-label text-start"
-            ></label>
+            <br />
+            <!-- Chain PREFIX -->
+            <input
+              id="exampleFormControlTextarea1"
+              class="form-control form-control-lg"
+              type="text"
+              v-model="validatorPubkeyPrefix"
+              placeholder="Please enter validator prefix Ex: cosmos,akash,regen..."
+              aria-label="value"
+            />
+            <br />
             <input
               id="exampleFormControlTextarea1"
               class="form-control form-control-lg"
@@ -136,10 +143,17 @@
                 placeholder="type:tendermint/PubKeySecp256k1 "
                 aria-label=".form-control-lg example"
               />
-              <label
-                for="exampleFormControlTextarea1"
-                class="form-label text-start"
-              ></label>
+              <br />
+              <!-- Chain PREFIX -->
+              <input
+                id="exampleFormControlTextarea1"
+                class="form-control form-control-lg"
+                type="text"
+                v-model="accountPrefix"
+                placeholder="Please enter account prefix Ex: cosmos,akash,regen..."
+                aria-label="value"
+              />
+              <br />
               <input
                 id="exampleFormControlTextarea1"
                 class="form-control form-control-lg"
@@ -197,6 +211,8 @@ export default {
   name: "IndexPage",
   data() {
     return {
+      accountPrefix: "",
+      validatorPubkeyPrefix: "",
       validatorPubkey: {
         type: "tendermint/PubKeyEd25519",
         value: "iARPJIXVwen//D6qB5CoQT1KrTK7ffGOkIstFF3KIgk=",
@@ -223,13 +239,16 @@ export default {
         type: "tendermint/PubKeyEd25519",
         value: this.valPubkeyValue,
       };
-      const bech32Pubkey = encodeBech32Pubkey(pubkey, "regen:valconspub");
-      console.log("bech32Pubkey ", bech32Pubkey); // regen:valconspub1zcjduepq3qzy7fy96hq7nllu864q0y9ggy754tfjhd7lrr5s3vk3ghw2ygyspmhej4
-
+      const bech32Pubkey = encodeBech32Pubkey(
+        pubkey,
+        `${this.validatorPubkeyPrefix}valconspub`
+      );
       const ed25519PubkeyRaw = fromBase64(pubkey.value);
       const addressData = sha256(ed25519PubkeyRaw).slice(0, 20);
-      const bech32Address = Bech32.encode("regen:valcons", addressData);
-      console.log("bech32Address ", bech32Address); // regen:valcons14y3uv3g3fp5k473qtdenmn5cv89y2s5nz7cshu
+      const bech32Address = Bech32.encode(
+        `${this.validatorPubkeyPrefix}valcons`,
+        addressData
+      );
       this.generatValKeys = true;
       this.generatedValKeys.valconspub = bech32Pubkey;
       this.generatedValKeys.valcons = bech32Address;
@@ -239,8 +258,7 @@ export default {
         type: "tendermint/PubKeySecp256k1",
         value: this.accountPubkeyValue,
       };
-      const address = pubkeyToAddress(pubkey, "cosmos");
-      console.log({ address });
+      const address = pubkeyToAddress(pubkey, this.accountPrefix);
       this.generatAccountAddressKeys = true;
       this.generatedAccountAddressKey = address;
     },
