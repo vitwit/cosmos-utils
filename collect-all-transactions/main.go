@@ -365,6 +365,30 @@ func collectAllTxns(address string) error {
 					}
 				}
 
+				if msg["@type"] == "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn" {
+
+					if len(messages) > 1 && i != 0 {
+						data1 := []string{"", "", "", "", "", "",
+							"", "", "", "", "", "", "", "", "",
+							fmt.Sprintf("%v", msg["@type"]),
+							fmt.Sprintf("%v", msg["sender"]),
+							"",
+							fmt.Sprintf("%v", msg["tokenIn"]),
+						}
+
+						if err = writer.Write(data1); err != nil {
+							return fmt.Errorf("error in writing data: %s", err.Error())
+						}
+					} else {
+						data = append(data, []string{
+							fmt.Sprintf("%v", msg["@type"]),
+							fmt.Sprintf("%v", msg["sender"]),
+							"",
+							fmt.Sprintf("%v", msg["tokenIn"]),
+						}...)
+					}
+				}
+
 				if msg["@type"] == "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward" {
 					if len(messages) > 1 && i != 0 {
 						amount, err := GetWithdrawAmount(logs, i, "withdraw_rewards", "amount")
