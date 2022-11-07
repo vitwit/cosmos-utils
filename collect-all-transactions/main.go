@@ -32,8 +32,17 @@ type Body struct {
 	Messages []map[string]interface{} `json:"messages"`
 }
 
+type Fee struct {
+	Amount []AmountObj `json:"amount"`
+}
+
+type AuthInfo struct {
+	Fee Fee `json:"fee"`
+}
+
 type Txn struct {
-	Body Body `json:"body"`
+	Body     Body     `json:"body"`
+	AuthInfo AuthInfo `json:"auth_info"`
 }
 
 type TxData struct {
@@ -85,9 +94,27 @@ func GetAmountByDecimal(amountStr string) string {
 	return fmt.Sprintf("%f", decimalAmt)
 }
 
-func GetAmountValue(amtObj string) string {
+func GetDenomInCap(denom string) string {
+	removeUDenom := denom[1:]
+	denomString := strings.ToUpper(removeUDenom)
+	return denomString
+}
+
+func GetDenomFromAmount(amountStr string) string {
+	re1 := regexp.MustCompile(`[a-z]+`)
+	denom := re1.FindAllString(amountStr, -1)
+	var denomString string
+	if len(denom) > 0 {
+		removeUDenom := denom[0][1:]
+		denomString = strings.ToUpper(removeUDenom)
+	}
+
+	return denomString
+}
+
+func GetAmountValue(amtObj string) (amountObject AmountObj) {
 	if amtObj == "" {
-		return ""
+		return amountObject
 	}
 
 	var amtStr string
@@ -102,11 +129,22 @@ func GetAmountValue(amtObj string) string {
 
 	re := regexp.MustCompile("[0-9]+")
 	amount := re.FindAllString(amtStr, -1)
+
+	re1 := regexp.MustCompile(`[a-z]+`)
+	denom := re1.FindAllString(amtStr, -1)
+	var denomString string
+	if len(denom) > 0 {
+		removeUDenom := denom[0][1:]
+		denomString = strings.ToUpper(removeUDenom)
+	}
+
 	if len(amount) > 0 {
 		decimalAmt := GetAmountByDecimal(amount[0])
-		return decimalAmt
+		amountObject.Amount = decimalAmt
+		amountObject.Denom = denomString
+		return amountObject
 	} else {
-		return ""
+		return amountObject
 	}
 }
 
@@ -129,20 +167,23 @@ func collectAllTxns(address string) error {
 		"BlockID",
 		"Height",
 		"TxHash",
-		"Codespace",
-		"Code",
-		"Data",
-		"RawLog",
-		"Logs",
-		"Info",
-		"GasWanted",
-		"GasUsed",
-		"Tx",
+		"Status",
+		// "Codespace",
+		// "Code",
+		// "Data",
+		// "RawLog",
+		// "Logs",
+		// "Info",
+		// "GasWanted",
+		// "GasUsed",
+		// "Tx",
+		"Fee",
 		"Timestamp",
 		"Type",
 		"FromAddress",
 		"ToAddress",
 		"Amount",
+		"Denom",
 		"Withdraw commission",
 		"Auto claim rewards",
 	}
@@ -184,9 +225,21 @@ func collectAllTxns(address string) error {
 				return fmt.Errorf("Error in marshaling logs: %s", err.Error())
 			}
 
-			txn, err := json.Marshal(tx.Data.Tx)
+			_, err = json.Marshal(tx.Data.Tx)
 			if err != nil {
 				return fmt.Errorf("Error in marshaling Tx: %s", err.Error())
+			}
+
+			var success string
+			if tx.Data.Code == 0 {
+				success = "Success"
+			} else {
+				success = "Fail"
+			}
+
+			var feeAmt string
+			if len(tx.Data.Tx.AuthInfo.Fee.Amount) > 0 {
+				feeAmt = tx.Data.Tx.AuthInfo.Fee.Amount[0].Amount
 			}
 
 			data := []string{
@@ -195,15 +248,17 @@ func collectAllTxns(address string) error {
 				strconv.Itoa(tx.Header.BlockID),
 				tx.Data.Height,
 				tx.Data.TxHash,
-				tx.Data.Codespace,
-				strconv.Itoa(tx.Data.Code),
-				tx.Data.Data,
-				tx.Data.RawLog,
-				string(logs),
-				tx.Data.Info,
-				tx.Data.GasWanted,
-				tx.Data.GasUsed,
-				string(txn),
+				success,
+				// tx.Data.Codespace,
+				// strconv.Itoa(tx.Data.Code),
+				// tx.Data.Data,
+				// tx.Data.RawLog,
+				// string(logs),
+				// tx.Data.Info,
+				// tx.Data.GasWanted,
+				// tx.Data.GasUsed,
+				// string(txn),
+				GetAmountByDecimal(feeAmt),
 				tx.Data.Timestamp,
 			}
 
@@ -232,6 +287,7 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["from_address"]),
 								fmt.Sprintf("%v", msg["to_address"]),
 								decimalAmt,
+								GetDenomInCap(amounts[0].Denom),
 							}
 
 							if err = writer.Write(data1); err != nil {
@@ -247,6 +303,7 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["from_address"]),
 								fmt.Sprintf("%v", msg["to_address"]),
 								decimalAmt,
+								GetDenomInCap(amounts[0].Denom),
 							}...)
 						}
 					}
@@ -308,8 +365,9 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["delegator_address"]),
 								fmt.Sprintf("%v", msg["validator_address"]),
 								delDecimalAmt,
+								amountString.Denom,
 								"",
-								amountString,
+								amountString.Amount,
 							}
 
 							if err = writer.Write(data1); err != nil {
@@ -348,7 +406,8 @@ func collectAllTxns(address string) error {
 							}
 						}
 
-						delDecimalAmt := GetAmountByDecimal(amounts.Amount)
+						amountString := GetAmountValue(rewards)
+						delDecimalAmt := GetAmountByDecimal(amountString.Amount)
 
 						if msg["delegator_address"] == address {
 							amountString := GetAmountValue(rewards)
@@ -357,8 +416,9 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["delegator_address"]),
 								fmt.Sprintf("%v", msg["validator_address"]),
 								delDecimalAmt,
+								amountString.Denom,
 								"",
-								amountString,
+								amountString.Amount,
 							}...)
 						}
 
@@ -388,6 +448,7 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["sender"]),
 								fmt.Sprintf("%v", msg["receiver"]),
 								decimalAmt,
+								amounts.Denom,
 							}
 
 							if err = writer.Write(data1); err != nil {
@@ -404,6 +465,7 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["sender"]),
 								fmt.Sprintf("%v", msg["receiver"]),
 								decimalAmt,
+								amounts.Denom,
 							}...)
 						}
 					}
@@ -450,6 +512,7 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["sender"]),
 								"",
 								decimalAmt,
+								GetDenomInCap(amountSwap.Denom),
 								// fmt.Sprintf("%v", msg["tokenIn"]),
 							}
 
@@ -473,6 +536,7 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["sender"]),
 								"",
 								decimalAmt,
+								GetDenomInCap(amountSwap.Denom),
 								// fmt.Sprintf("%v", msg["tokenIn"]),
 							}...)
 						}
@@ -496,7 +560,8 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["delegator_address"]),
 								fmt.Sprintf("%v", msg["validator_address"]),
 								// amount,
-								amountString,
+								amountString.Amount,
+								amountString.Denom,
 							}
 
 							if err = writer.Write(data1); err != nil {
@@ -517,7 +582,8 @@ func collectAllTxns(address string) error {
 								fmt.Sprintf("%v", msg["@type"]),
 								fmt.Sprintf("%v", msg["delegator_address"]),
 								fmt.Sprintf("%v", msg["validator_address"]),
-								amountString,
+								amountString.Amount,
+								amountString.Denom,
 							}...)
 						}
 
@@ -540,7 +606,7 @@ func collectAllTxns(address string) error {
 							fmt.Sprintf("%v", msg["validator_address"]),
 							"",
 							"",
-							amountString,
+							amountString.Amount,
 						}
 
 						if err = writer.Write(data1); err != nil {
@@ -559,7 +625,7 @@ func collectAllTxns(address string) error {
 							fmt.Sprintf("%v", msg["validator_address"]),
 							"",
 							"",
-							amountString,
+							amountString.Amount,
 						}...)
 					}
 				}
