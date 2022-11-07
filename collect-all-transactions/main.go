@@ -162,10 +162,10 @@ func collectAllTxns(address string) error {
 	defer writer.Flush()
 
 	header := []string{
-		"ID",
-		"ChainID",
-		"BlockID",
-		"Height",
+		// "ID",
+		// "ChainID",
+		// "BlockID",
+		// "Height",
 		"TxHash",
 		"Status",
 		// "Codespace",
@@ -243,10 +243,10 @@ func collectAllTxns(address string) error {
 			}
 
 			data := []string{
-				strconv.Itoa(tx.Header.ID),
-				tx.Header.ChainID,
-				strconv.Itoa(tx.Header.BlockID),
-				tx.Data.Height,
+				// strconv.Itoa(tx.Header.ID),
+				// tx.Header.ChainID,
+				// strconv.Itoa(tx.Header.BlockID),
+				// tx.Data.Height,
 				tx.Data.TxHash,
 				success,
 				// tx.Data.Codespace,
