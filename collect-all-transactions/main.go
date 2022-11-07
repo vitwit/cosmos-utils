@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -71,6 +74,40 @@ type Event struct {
 
 type Log struct {
 	Events []Event `json:"events"`
+}
+
+func GetAmountByDecimal(amountStr string) string {
+	if amountStr == "" {
+		return ""
+	}
+	amount, _ := strconv.ParseFloat(amountStr, 64)
+	decimalAmt := amount / math.Pow(10, 6)
+	return fmt.Sprintf("%f", decimalAmt)
+}
+
+func GetAmountValue(amtObj string) string {
+	if amtObj == "" {
+		return ""
+	}
+
+	var amtStr string
+	if strings.Contains(amtObj, "ibc") {
+		strSplit := strings.Split(amtObj, ",")
+		if len(strSplit) > 1 {
+			amtStr = strSplit[1]
+		}
+	} else {
+		amtStr = amtObj
+	}
+
+	re := regexp.MustCompile("[0-9]+")
+	amount := re.FindAllString(amtStr, -1)
+	if len(amount) > 0 {
+		decimalAmt := GetAmountByDecimal(amount[0])
+		return decimalAmt
+	} else {
+		return ""
+	}
 }
 
 func collectAllTxns(address string) error {
@@ -186,25 +223,32 @@ func collectAllTxns(address string) error {
 						return fmt.Errorf("Error in unmarshaling the JSON msg send data: %s", err.Error())
 					}
 
+					decimalAmt := GetAmountByDecimal(amounts[0].Amount)
 					if len(messages) > 1 && i != 0 {
-						data1 := []string{"", "", "", "", "", "",
-							"", "", "", "", "", "", "", "", "",
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["from_address"]),
-							fmt.Sprintf("%v", msg["to_address"]),
-							amounts[0].Amount,
+						if msg["from_address"] == address || msg["to_address"] == address {
+							data1 := []string{"", "", "", "", "", "",
+								"", "", "", "", "", "", "", "", "",
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["from_address"]),
+								fmt.Sprintf("%v", msg["to_address"]),
+								decimalAmt,
+							}
+
+							if err = writer.Write(data1); err != nil {
+								return fmt.Errorf("Error in writing data: %s", err.Error())
+							}
 						}
 
-						if err = writer.Write(data1); err != nil {
-							return fmt.Errorf("Error in writing data: %s", err.Error())
-						}
 					} else {
-						data = append(data, []string{
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["from_address"]),
-							fmt.Sprintf("%v", msg["to_address"]),
-							amounts[0].Amount,
-						}...)
+						if msg["from_address"] == address || msg["to_address"] == address {
+							decimalAmt := GetAmountByDecimal(amounts[0].Amount)
+							data = append(data, []string{
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["from_address"]),
+								fmt.Sprintf("%v", msg["to_address"]),
+								decimalAmt,
+							}...)
+						}
 					}
 				}
 
@@ -255,18 +299,22 @@ func collectAllTxns(address string) error {
 							}
 						}
 
-						data1 := []string{"", "", "", "", "", "",
-							"", "", "", "", "", "", "", "", "",
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["delegator_address"]),
-							fmt.Sprintf("%v", msg["validator_address"]),
-							amounts.Amount,
-							"",
-							rewards,
-						}
+						amountString := GetAmountValue(rewards)
+						delDecimalAmt := GetAmountByDecimal(amounts.Amount)
+						if msg["delegator_address"] == address {
+							data1 := []string{"", "", "", "", "", "",
+								"", "", "", "", "", "", "", "", "",
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["delegator_address"]),
+								fmt.Sprintf("%v", msg["validator_address"]),
+								delDecimalAmt,
+								"",
+								amountString,
+							}
 
-						if err = writer.Write(data1); err != nil {
-							return fmt.Errorf("Error in writing data: %s", err.Error())
+							if err = writer.Write(data1); err != nil {
+								return fmt.Errorf("Error in writing data: %s", err.Error())
+							}
 						}
 					} else {
 						var rewards string
@@ -300,14 +348,20 @@ func collectAllTxns(address string) error {
 							}
 						}
 
-						data = append(data, []string{
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["delegator_address"]),
-							fmt.Sprintf("%v", msg["validator_address"]),
-							amounts.Amount,
-							"",
-							rewards,
-						}...)
+						delDecimalAmt := GetAmountByDecimal(amounts.Amount)
+
+						if msg["delegator_address"] == address {
+							amountString := GetAmountValue(rewards)
+							data = append(data, []string{
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["delegator_address"]),
+								fmt.Sprintf("%v", msg["validator_address"]),
+								delDecimalAmt,
+								"",
+								amountString,
+							}...)
+						}
+
 					}
 				}
 
@@ -324,68 +378,105 @@ func collectAllTxns(address string) error {
 						return fmt.Errorf("Error in unmarshaling the JSON transfer data: %s", err.Error())
 					}
 
+					decimalAmt := GetAmountByDecimal(amounts.Amount)
+
 					if len(messages) > 1 && i != 0 {
-						data1 := []string{"", "", "", "", "", "",
-							"", "", "", "", "", "", "", "", "",
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["sender"]),
-							fmt.Sprintf("%v", msg["receiver"]),
-							amounts.Amount,
+						if msg["sender"] == address || msg["receiver"] == address {
+							data1 := []string{"", "", "", "", "", "",
+								"", "", "", "", "", "", "", "", "",
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["sender"]),
+								fmt.Sprintf("%v", msg["receiver"]),
+								decimalAmt,
+							}
+
+							if err = writer.Write(data1); err != nil {
+								return fmt.Errorf("Error in writing data: %s", err.Error())
+							}
 						}
 
-						if err = writer.Write(data1); err != nil {
-							return fmt.Errorf("Error in writing data: %s", err.Error())
-						}
 					} else {
-						data = append(data, []string{
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["sender"]),
-							fmt.Sprintf("%v", msg["receiver"]),
-							amounts.Amount,
-						}...)
+						if msg["sender"] == address || msg["receiver"] == address {
+							decimalAmt := GetAmountByDecimal(amounts.Amount)
+
+							data = append(data, []string{
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["sender"]),
+								fmt.Sprintf("%v", msg["receiver"]),
+								decimalAmt,
+							}...)
+						}
 					}
 				}
 
 				if msg["@type"] == "/cosmos.gov.v1beta1.MsgVote" {
 					if len(messages) > 1 && i != 0 {
-						data1 := []string{"", "", "", "", "", "",
-							"", "", "", "", "", "", "", "", "",
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["voter"]),
+						if msg["voter"] == address {
+							data1 := []string{"", "", "", "", "", "",
+								"", "", "", "", "", "", "", "", "",
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["voter"]),
+							}
+
+							if err = writer.Write(data1); err != nil {
+								return fmt.Errorf("Error in writing data: %s", err.Error())
+							}
 						}
 
-						if err = writer.Write(data1); err != nil {
-							return fmt.Errorf("Error in writing data: %s", err.Error())
-						}
 					} else {
-						data = append(data, []string{
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["voter"]),
-						}...)
+						if msg["voter"] == address {
+							data = append(data, []string{
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["voter"]),
+							}...)
+						}
+
 					}
 				}
 
 				if msg["@type"] == "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn" {
+					var amountSwap AmountObj
+
+					aBytes, _ := json.Marshal(msg["tokenIn"])
+					_ = json.Unmarshal(aBytes, &amountSwap)
+
+					decimalAmt := GetAmountByDecimal(amountSwap.Amount)
 
 					if len(messages) > 1 && i != 0 {
-						data1 := []string{"", "", "", "", "", "",
-							"", "", "", "", "", "", "", "", "",
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["sender"]),
-							"",
-							fmt.Sprintf("%v", msg["tokenIn"]),
+						if msg["sender"] == address {
+							data1 := []string{"", "", "", "", "", "",
+								"", "", "", "", "", "", "", "", "",
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["sender"]),
+								"",
+								decimalAmt,
+								// fmt.Sprintf("%v", msg["tokenIn"]),
+							}
+
+							if err = writer.Write(data1); err != nil {
+								return fmt.Errorf("error in writing data: %s", err.Error())
+							}
 						}
 
-						if err = writer.Write(data1); err != nil {
-							return fmt.Errorf("error in writing data: %s", err.Error())
-						}
 					} else {
-						data = append(data, []string{
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["sender"]),
-							"",
-							fmt.Sprintf("%v", msg["tokenIn"]),
-						}...)
+						var amountSwap AmountObj
+
+						aBytes, _ := json.Marshal(msg["tokenIn"])
+						_ = json.Unmarshal(aBytes, &amountSwap)
+
+						decimalAmt := GetAmountByDecimal(amountSwap.Amount)
+						fmt.Println("amount swappppppppppp", amountSwap, msg["tokenIn"])
+
+						if msg["sender"] == address {
+							data = append(data, []string{
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["sender"]),
+								"",
+								decimalAmt,
+								// fmt.Sprintf("%v", msg["tokenIn"]),
+							}...)
+						}
+
 					}
 				}
 
@@ -397,17 +488,22 @@ func collectAllTxns(address string) error {
 							return fmt.Errorf("Error in unmarshaling the JSON data: %s", err.Error())
 						}
 
-						data1 := []string{"", "", "", "", "", "",
-							"", "", "", "", "", "", "", "", "",
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["delegator_address"]),
-							fmt.Sprintf("%v", msg["validator_address"]),
-							amount,
+						if msg["delegator_address"] == address {
+							amountString := GetAmountValue(amount)
+							data1 := []string{"", "", "", "", "", "",
+								"", "", "", "", "", "", "", "", "",
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["delegator_address"]),
+								fmt.Sprintf("%v", msg["validator_address"]),
+								// amount,
+								amountString,
+							}
+
+							if err = writer.Write(data1); err != nil {
+								return fmt.Errorf("Error in writing data: %s", err.Error())
+							}
 						}
 
-						if err = writer.Write(data1); err != nil {
-							return fmt.Errorf("Error in writing data: %s", err.Error())
-						}
 					} else {
 						amount, err := GetWithdrawAmount(logs, i, "withdraw_rewards", "amount")
 
@@ -415,12 +511,16 @@ func collectAllTxns(address string) error {
 							return fmt.Errorf("Error in unmarshaling the JSON data: %s", err.Error())
 						}
 
-						data = append(data, []string{
-							fmt.Sprintf("%v", msg["@type"]),
-							fmt.Sprintf("%v", msg["delegator_address"]),
-							fmt.Sprintf("%v", msg["validator_address"]),
-							amount,
-						}...)
+						if msg["delegator_address"] == address {
+							amountString := GetAmountValue(amount)
+							data = append(data, []string{
+								fmt.Sprintf("%v", msg["@type"]),
+								fmt.Sprintf("%v", msg["delegator_address"]),
+								fmt.Sprintf("%v", msg["validator_address"]),
+								amountString,
+							}...)
+						}
+
 					}
 				}
 
@@ -433,13 +533,14 @@ func collectAllTxns(address string) error {
 							return fmt.Errorf("Error in unmarshaling the JSON data: %s", err.Error())
 						}
 
+						amountString := GetAmountValue(amount)
 						data1 := []string{"", "", "", "", "", "",
 							"", "", "", "", "", "", "", "", "",
 							fmt.Sprintf("%v", msg["@type"]),
 							fmt.Sprintf("%v", msg["validator_address"]),
 							"",
 							"",
-							amount,
+							amountString,
 						}
 
 						if err = writer.Write(data1); err != nil {
@@ -452,12 +553,13 @@ func collectAllTxns(address string) error {
 							return fmt.Errorf("Error in unmarshaling the JSON data: %s", err.Error())
 						}
 
+						amountString := GetAmountValue(amount)
 						data = append(data, []string{
 							fmt.Sprintf("%v", msg["@type"]),
 							fmt.Sprintf("%v", msg["validator_address"]),
 							"",
 							"",
-							amount,
+							amountString,
 						}...)
 					}
 				}
