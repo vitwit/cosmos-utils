@@ -17,7 +17,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-const RequestPrefix = "https://api-osmosis.cosmostation.io/v1/account/new_txs/"
+const RequestPrefix = "https://api-juno.cosmostation.io/v1/account/new_txs/"
 
 //"https://api.cosmostation.io/v1/account/new_txs/"
 
@@ -209,7 +209,7 @@ func collectAllTxns(address string) error {
 
 	for {
 		url := RequestPrefix + address + "?limit=20&from=" + fromId
-
+		fmt.Println("url---------", url)
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", url, nil)
 		// ...
@@ -591,7 +591,7 @@ func collectAllTxns(address string) error {
 					}
 
 					if msg["@type"] == "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward" {
-						if len(messages) > 0 && i != 0 {
+						if len(messages) > 0 && count != 0 {
 							amount, err := GetWithdrawAmount(logs, i, "withdraw_rewards", "amount")
 
 							if err != nil {
@@ -614,6 +614,7 @@ func collectAllTxns(address string) error {
 							}
 
 						} else {
+							count++
 							amount, err := GetWithdrawAmount(logs, i, "withdraw_rewards", "amount")
 
 							if err != nil {
@@ -638,7 +639,7 @@ func collectAllTxns(address string) error {
 
 					if msg["@type"] == "/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission" {
 
-						if len(messages) > 0 && i != 0 {
+						if len(messages) > 0 && count != 0 {
 							amount, err := GetWithdrawAmount(logs, i, "withdraw_commission", "amount")
 
 							if err != nil {
@@ -661,6 +662,7 @@ func collectAllTxns(address string) error {
 							}
 
 						} else {
+							count++
 							amount, err := GetWithdrawAmount(logs, i, "withdraw_commission", "amount")
 
 							if err != nil {
