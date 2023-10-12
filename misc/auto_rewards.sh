@@ -16,12 +16,13 @@ do
         chain_id=$(echo "$network" | jq -r '.chainId')
         node=$(echo "$network" | jq -r '.node')
         feepayer=$(echo "$network" | jq -r '.feepayer')
+        fees=$(echo "$network" | jq -r '.fees')
 
         echo "About to withdraw commission and reward for network: $chain_id"
 
         # Withdraw rewards and execute on the network
         $binary tx distribution withdraw-rewards $validator --from $granter --chain-id $chain_id -y --generate-only > rewards.json
-        $binary tx authz exec rewards.json --chain-id $chain_id --node $node --fees 200uatom --fee-account $feepayer --from $grantee -y
+        $binary tx authz exec rewards.json --chain-id $chain_id --node $node --fees $fees --fee-account $feepayer --from $grantee -y
 
         # Add sleep if needed before processing the next network
         # sleep 60
