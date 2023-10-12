@@ -1,0 +1,20 @@
+[
+    {
+        "binary": "gaiad",
+        "granter": "cosmos1...kurw791",
+        "grantee": "your_grantee_address1",
+        "chainId": "cosmoshub-4",
+        "node": "https://rpc.cosmos.vitwit.com:443",
+        "fees": "0.0025uatom",
+        "feepayer": "fee_payer_address1"
+    },
+    {
+        "binary": "osmosisd",
+        "granter": "osmo1...abcd123",
+        "grantee": "your_grantee_address2",
+        "chainId": "osmosis-1",
+        "fees": "0.0025uosmo",
+        "node": "https://rpc.osmosis.vitwit.com:443",
+        "feepayer": "fee_payer_address2"
+    }
+]
