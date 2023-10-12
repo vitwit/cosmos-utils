@@ -8,7 +8,7 @@ The config.json file is read using the jq tool, which is a command-line JSON pro
 
 The script then iterates through the networks specified in the JSON configuration, extracting the parameters for each network and performing the desired operations.
 
-Make sure to replace the ellipses (...) in the JSON configuration with your specific network parameters. You can add more network configurations to the config.json 
+Make sure to replace the ellipses (...) in the JSON configuration with your specific network parameters. You can add more network configurations to the `auto_rewards_config.json`
 file as needed, and the script will process them all in a loop.
 
 ### Crontab for running every month at specified time.
@@ -23,7 +23,7 @@ crontab -e
 ```
 Add the following line to schedule your script:
 ```bash
-0 21 1 * * /vitwit/cosmos-utils/scripts/auto_rewards_script.sh
+0 21 1 * * /vitwit/cosmos-utils/scripts/auto_rewards.sh
 ```
 
 Where
