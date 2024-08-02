@@ -111,7 +111,7 @@ got commitInfo with 34 stores
 hash: 94800fc8dc32db79388b5033d40d091b21b870865889a9d0b9e7563db93c44b9
 ```
 
-From this we I could see that all the module hashes match with each other across the validators except the `bank` module hash. Validator 1 has `6a84014dfe03092c897c17b979e47b2374c7df6f0b6a993abee1fee2ee146ce7` for the `bank` and validator 2 has `94800fc8dc32db79388b5033d40d091b21b870865889a9d0b9e7563db93c44b9` for the `bank` module.
+From this I could see that all the module hashes match with each other across the validators except the `bank` module hash. Validator 1 has `6a84014dfe03092c897c17b979e47b2374c7df6f0b6a993abee1fee2ee146ce7` for the `bank` and validator 2 has `94800fc8dc32db79388b5033d40d091b21b870865889a9d0b9e7563db93c44b9` for the `bank` module.
 
 So the `bank` module is the offending module I should focus on.
 
